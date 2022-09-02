@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/usr/local/app
+    environment:
+      REDIS_HOST: redis
+    command: ["flask","run","--debugger","--reload","-h","0.0.0.0"]
+    depends_on:
+      - redis
+  worker:
+    build: .
+    volumes:
+      - .:/usr/local/app
+    environment:
+      REDIS_HOST: redis
+    command: ["celery","-A","celery_worker","worker"]
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD-SHELL","celery -A celery_worker status || exit 1"]
+      interval: 5m
+      timeout: 30s
+      retries: 2
+      start_period: 30s
+  redis:
+    image: "redis"
+    ports:
+      - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
